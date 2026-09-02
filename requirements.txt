@@ -1,0 +1,20 @@
+# Pinned to the versions this project was built and tested against.
+fastapi==0.123.0
+uvicorn[standard]==0.38.0
+pydantic==2.12.5
+pydantic-settings==2.14.1
+PyYAML==6.0.3
+SQLAlchemy==2.0.45
+pandas==2.3.1
+httpx==0.28.1
+python-dotenv==1.0.1
+pytest==9.1.1
+
+# Needed for the live Razorpay path (the sandbox provider and the connectivity
+# probe). Absent, the app still runs entirely on generated sample data and the
+# probe reports "sdk_missing" rather than failing.
+razorpay==2.0.1
+
+# Optional. Without it, exception explanations fall back to deterministic
+# template text, labelled as such in the UI.
+anthropic>=0.40.0

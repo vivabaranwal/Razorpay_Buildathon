@@ -1,0 +1,56 @@
+# SettleTrace reconciliation rules.
+#
+# FRS section 10, business rule 4: every configurable threshold lives here, not in
+# code, so a rate-card change never requires a code change (SRS 4.3.4).
+
+# --- FR-1.4: fee / GST / reserve verification -------------------------------
+# MDR rates are per merchant per payment method, because rate cards vary by
+# merchant agreement. Rates are fractions, not percentages.
+fee_rates:
+  default:
+    upi: 0.0000        # UPI is zero-MDR for most domestic merchants
+    card: 0.0200
+    netbanking: 0.0175
+    wallet: 0.0200
+    emi: 0.0300
+    international_card: 0.0300
+
+# GST charged on the MDR fee itself (FRS FR-1.4: expected GST = fee x 18%).
+gst_rate: 0.18
+
+# Reserve holdback withheld from settlement, released later. Fraction of the
+# gross transaction amount. Zero for merchants with no reserve arrangement.
+reserve_rates:
+  default: 0.0
+
+# --- FR-1.3: settlement matching -------------------------------------------
+# Tolerance absorbs rounding drift across many line items. Business rule under
+# FR-1.3 is explicit that this must be configurable and not hard-coded to zero.
+# Expressed in paise (Razorpay's minor unit): 100 paise = INR 1.
+match_tolerance_paise: 100
+
+# Per-line-item fee tolerance, also in paise. Tighter than the batch tolerance
+# because a single fee line has far less room for legitimate rounding.
+fee_tolerance_paise: 1
+
+# --- FR-2.1: stuck-payment detection ---------------------------------------
+# How long a payment may sit in a non-terminal state before it becomes a
+# stuck-candidate. Varies by method because normal resolution time varies.
+resolution_windows_seconds:
+  upi: 300             # 5 min; UPI either resolves fast or not at all
+  card: 900            # 15 min
+  netbanking: 1800     # 30 min; bank redirects are slow
+  wallet: 600          # 10 min
+  emi: 1800
+  default: 900
+
+# --- FR-2.2: exponential backoff -------------------------------------------
+# Re-check schedule for stuck candidates. Capped so a genuinely stuck order is
+# never deferred indefinitely (FR-2.2 business rule).
+backoff_schedule_seconds: [30, 120, 600, 1800]
+backoff_max_attempts: 4
+
+# --- FR-2.5: webhook deduplication -----------------------------------------
+# Seen event IDs are retained at least as long as Razorpay's documented retry
+# window (24 hours).
+webhook_event_retention_hours: 24
