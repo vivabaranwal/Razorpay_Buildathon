@@ -225,6 +225,8 @@ export default function App() {
 
   const onDashboard = path === "/";
 
+  // Also covers arriving by deep link or the back button rather than by
+  // clicking the nav - either way the reader has now seen it.
   useEffect(() => {
     if (onDashboard || itchSeen) return;
     try {
@@ -236,12 +238,18 @@ export default function App() {
   }, [onDashboard, itchSeen]);
 
   useEffect(() => {
+    if (!onDashboard) return;
     void loadAll();
-  }, [loadAll]);
+  }, [loadAll, onDashboard]);
 
   // Poll so the scheduler countdown and any autonomous correction appear
   // without the operator refreshing.
   useEffect(() => {
+    // Gated on the route: an early return below skips the dashboard's markup
+    // but not its effects, so without this the poll would keep hitting the API
+    // the whole time someone is reading the narrative page.
+    if (!onDashboard) return;
+
     const timer = setInterval(() => {
       void Promise.allSettled([
         api.schedulerStatus().then(setScheduler),
@@ -251,7 +259,7 @@ export default function App() {
       ]);
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [onDashboard]);
 
   async function handleRunBatch(settlementId: string) {
     const created = await api.runBatch(settlementId);
@@ -264,8 +272,8 @@ export default function App() {
     await loadAll();
   }
 
-  // Returned before the dashboard's effects run, so its polling loop does not
-  // keep firing while the reader is on the narrative page.
+  // Hooks above run unconditionally; the dashboard's data effects are gated on
+  // `onDashboard` so nothing polls while this branch is showing.
   if (!onDashboard) {
     return <TheItch onNavigate={navigate} />;
   }

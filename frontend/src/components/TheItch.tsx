@@ -114,6 +114,32 @@ const PRINCIPLES = [
   "Nothing is ever silently dropped.",
 ];
 
+/**
+ * One closing promise.
+ *
+ * Its own component rather than an inline map callback: useReveal is a hook,
+ * and calling a hook inside a callback breaks the rule that hook order must be
+ * identical on every render.
+ */
+function Principle({ line, index }: { line: string; index: number }) {
+  const [ref, visible] = useReveal<HTMLDivElement>(index * 140);
+
+  return (
+    <div ref={ref} className={`reveal ${visible ? "is-visible" : ""}`}>
+      <p
+        className="font-display mx-auto max-w-[18ch] text-center font-medium leading-[1.15]"
+        style={{
+          fontSize: "clamp(30px, 4.6vw, 50px)",
+          letterSpacing: "-0.025em",
+          fontVariationSettings: '"opsz" 120',
+        }}
+      >
+        {line}
+      </p>
+    </div>
+  );
+}
+
 function ProofNumber({
   value,
   suffix,
@@ -332,27 +358,9 @@ export function TheItch({ onNavigate }: { onNavigate: (to: string) => void }) {
         {/* 06 - The principle. Each promise gets its own moment. */}
         <Section chapter="06 — The principle" wash>
           <div className="space-y-24">
-            {PRINCIPLES.map((line, i) => {
-              const [ref, visible] = useReveal<HTMLDivElement>(i * 140);
-              return (
-                <div
-                  key={line}
-                  ref={ref}
-                  className={`reveal ${visible ? "is-visible" : ""}`}
-                >
-                  <p
-                    className="font-display mx-auto max-w-[18ch] text-center font-medium leading-[1.15]"
-                    style={{
-                      fontSize: "clamp(30px, 4.6vw, 50px)",
-                      letterSpacing: "-0.025em",
-                      fontVariationSettings: '"opsz" 120',
-                    }}
-                  >
-                    {line}
-                  </p>
-                </div>
-              );
-            })}
+            {PRINCIPLES.map((line, i) => (
+              <Principle key={line} line={line} index={i} />
+            ))}
           </div>
         </Section>
 
