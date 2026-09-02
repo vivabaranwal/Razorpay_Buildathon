@@ -1,0 +1,593 @@
+/* SettleTrace design system.
+ *
+ * One source of truth: every colour is a token defined twice - once on :root
+ * for light, once under [data-theme="dark"]. Components reference roles
+ * (--surface, --accent) and never raw hex, so a theme change is a value swap
+ * rather than a second stylesheet.
+ *
+ * Typography carries the character: Fraunces for the wordmark, section heads
+ * and hero numbers only; Inter for anything dense; JetBrains Mono for IDs so
+ * they read as identifiers rather than prose.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* --- Light: warm paper, not stark white ------------------------------ */
+    --bg: #faf6ee;
+    --surface: #ffffff;
+    --surface-raised: #fbf9f4;
+    --border: #e8e1d3;
+    --border-strong: #d8cfbc;
+
+    --text-primary: #211e1a;
+    --text-secondary: #6b655a;
+    --text-muted: #8d8677;
+
+    --accent: #a67c3d;
+    --accent-hover: #8f6a32;
+    /* White fails on this amber (3.77:1); dark text reaches 4.40:1. Measured,
+       not assumed - the spec asked for exactly this check. */
+    --accent-ink: #211e1a;
+
+    /* Fills, dots and chart bars use the specified values. */
+    --success: #7a9b76;
+    --warning: #d2924c;
+    --danger: #b5544a;
+
+    /* Text variants: the fill values fall below 4.5:1 on the paper
+       background, so small text uses a darker step of the same hue. Same
+       colour family, legible at 12-14px. */
+    --success-text: #5b7757;
+    --warning-text: #9b6427;
+    --danger-text: #b15249;
+    --accent-text: #8c6833;
+
+    --glow-opacity: 0.14;
+    --surface-blur: none;
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    /* --- Dark: near-black with a warm undertone, never #000 -------------- */
+    --bg: #0e0d0b;
+    --surface: rgba(23, 21, 18, 0.72);
+    --surface-raised: rgba(32, 29, 24, 0.85);
+    --border: #2a2620;
+    --border-strong: #3a352c;
+
+    --text-primary: #f2ede4;
+    --text-secondary: #a39c8e;
+    --text-muted: #7d7668;
+
+    --accent: #c89b5c;
+    --accent-hover: #d9ae72;
+    /* White is 2.53:1 on this amber; dark ink is 6.56:1. */
+    --accent-ink: #211e1a;
+
+    --success: #7a9b76;
+    --warning: #d2924c;
+    --danger: #b5544a;
+
+    /* All clear 4.5:1 against #0E0D0B, so the fills double as text here. */
+    --success-text: #7a9b76;
+    --warning-text: #d2924c;
+    --danger-text: #c4675c;
+    --accent-text: #c89b5c;
+
+    --glow-opacity: 0.18;
+    --surface-blur: blur(12px);
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    /* Theme switches shouldn't snap. Deliberately short - a slow fade on a
+       whole-page colour change reads as lag, not polish. */
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+  }
+
+  /* Numbers line up in columns so amounts compare down a table without
+     re-reading each row. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Keyboard focus is never removed, only restyled. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+}
+
+@layer components {
+  /* --- Type roles ------------------------------------------------------- */
+
+  .font-display {
+    font-family: Fraunces, Georgia, serif;
+    /* Fraunces is variable: a lower optical size keeps the serifs crisp at
+       text sizes, while hero numbers opt into a display cut below. */
+    font-variation-settings: "opsz" 24;
+  }
+
+  .wordmark {
+    @apply font-display;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .heading {
+    @apply font-display;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+
+  .hero-number {
+    @apply font-display tabular;
+    font-size: clamp(40px, 5vw, 60px);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    /* The display optical size is what makes these read as the confident
+       anchor of the card rather than as large body text. */
+    font-variation-settings: "opsz" 120;
+  }
+
+  .label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  .id {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* --- Surfaces --------------------------------------------------------- */
+
+  .card {
+    background: var(--surface);
+    /* Prefixed first: Safari still needs it, and the translucent card is the
+       whole look in dark mode - unprefixed it falls back to a flat panel. */
+    -webkit-backdrop-filter: var(--surface-blur);
+    backdrop-filter: var(--surface-blur);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+
+  /* --- Controls --------------------------------------------------------- */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 100ms ease;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn;
+    background: var(--accent);
+    /* Dark ink, not white - see the token comment above. */
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-primary);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-raised);
+    border-color: var(--accent);
+  }
+
+  .input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-primary);
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease;
+  }
+  .input::placeholder {
+    color: var(--text-muted);
+  }
+  .input:hover:not(:disabled) {
+    border-color: var(--border-strong);
+  }
+  .input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+  .input:disabled {
+    opacity: 0.4;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  /* --- Ambient glow ----------------------------------------------------- */
+
+  /* A soft radial wash in the accent behind a hero number, ~1.5x its box.
+     Deliberately confined to a helper class so it cannot spread: used behind
+     two numbers on Overview and nowhere else. */
+  .glow {
+    position: relative;
+    isolation: isolate;
+  }
+  .glow::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 150%;
+    height: 150%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      circle,
+      var(--accent) 0%,
+      transparent 70%
+    );
+    opacity: var(--glow-opacity);
+    filter: blur(70px);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* --- Tables ----------------------------------------------------------- */
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .data-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .data-table td {
+    /* Row height well above a default dense table, per the layout brief. */
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  /* Zebra striping kept barely-there: enough to track a wide row, not enough
+     to read as a pattern. */
+  .data-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--border) 22%, transparent);
+  }
+  .data-table tbody tr.is-clickable {
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  .data-table tbody tr.is-clickable:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .data-table tbody tr.is-selected {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+}
+
+@layer utilities {
+  /* Tab switches and the detail drawer: calm, no bounce. */
+  .animate-fade-in {
+    animation: fade-in 220ms ease-out;
+  }
+  .animate-slide-in {
+    animation: slide-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .animate-pulse-dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+
+  /* Anyone who has asked for less motion gets none of it. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Scrollbars in the surface palette rather than a light strip through a dark
+   panel. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* --- The Itch: long-form narrative page ---------------------------------- */
+
+@layer components {
+  /* A fine grain over the whole page. The classic print trick: at 3-4% it is
+     never seen as an effect, but its absence reads as flat. Fixed rather than
+     scrolling so it behaves like paper texture, not a moving layer. */
+  .grain::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Sections alternate between the flat background and a 2-3% accent wash, so
+     a long scroll feels like moving through a space rather than down one flat
+     colour. Deliberately below the threshold of being noticed as a colour. */
+  .section-wash {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--accent) 3%, transparent) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Chapter markers: quiet enough to ignore, present enough to orient. */
+  .chapter {
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  /* Evidence cards: pinned exhibits rather than testimonial boxes. The tilt is
+     applied per card in the component so it can alternate; a uniform rotation
+     would read as a mistake rather than as placement. */
+  .exhibit {
+    position: relative;
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
+    border-radius: 4px;
+    padding: 28px 26px 24px;
+    transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .exhibit:hover {
+    /* Straightens under the cursor, as if picked up off the board. */
+    transform: rotate(0deg) translateY(-3px) !important;
+  }
+
+  /* The source label as a stamped tag in the corner, not a caption. */
+  .exhibit-tag {
+    display: inline-block;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 3px;
+    padding: 4px 9px;
+    margin-bottom: 16px;
+    word-break: break-all;
+  }
+
+  /* Pull-quote: breaks left out of the prose column so the page briefly
+     widens, which is what creates the rhythm. */
+  .pull-quote {
+    font-family: Fraunces, Georgia, serif;
+    font-style: italic;
+    font-size: clamp(26px, 3.4vw, 38px);
+    font-weight: 400;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    border-left: 3px solid var(--accent);
+    padding-left: 32px;
+    margin: 56px 0 56px -40px;
+    font-variation-settings: "opsz" 96;
+  }
+
+  /* Reveal-on-scroll. The transform is only ever applied to the hidden state,
+     so a revealed element carries no lingering transform that would create a
+     containing block for anything positioned inside it. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+      opacity 460ms ease-out,
+      transform 460ms ease-out;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* The page's climax: a heavier glow than the dashboard's, since this is the
+     payoff rather than a status readout. */
+  .proof-glow {
+    position: relative;
+    isolation: isolate;
+  }
+  .proof-glow::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 190%;
+    height: 190%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, var(--accent) 0%, transparent 68%);
+    opacity: calc(var(--glow-opacity) * 1.7);
+    filter: blur(80px);
+    z-index: -1;
+    pointer-events: none;
+  }
+}
+
+@layer components {
+  /* --- The Itch nav cue ---------------------------------------------------
+   *
+   * A slow breathing dot rather than a blink. A hard on/off flash reads as an
+   * ad banner and fights the restraint the rest of the product commits to;
+   * a 2.8s opacity swell catches peripheral vision without ever demanding
+   * attention. It reuses the same pulse language as the "Auto re-check on"
+   * badge, so it reads as part of the system rather than a decoration.
+   */
+  .itch-dot {
+    animation: itch-breathe 2.8s ease-in-out infinite;
+  }
+
+  @keyframes itch-breathe {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* A single sweep of light across the label shortly after load, then never
+     again. One gesture that says "look here" and then gets out of the way -
+     a repeating shimmer would be the thing this design is meant to avoid. */
+  .itch-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      var(--accent-text) 40%,
+      color-mix(in srgb, var(--accent) 55%, white) 50%,
+      var(--accent-text) 60%
+    );
+    background-size: 220% 100%;
+    background-position: 180% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: itch-sweep 1500ms ease-out 900ms 1 forwards;
+  }
+
+  @keyframes itch-sweep {
+    to {
+      background-position: -60% 0;
+    }
+  }
+
+  /* Hovering ends the cue: once the reader has found it, the animation has
+     done its job and continuing would just be noise. */
+  .itch-link:hover .itch-dot {
+    animation: none;
+    opacity: 1;
+    transform: scale(1);
+  }
+}
