@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>SettleTrace</title>
+
+  <!-- Rounded tile in the app's warm accent. A filled shape rather than bare
+       letters: at 16px in a browser tab, glyphs on a transparent ground
+       disappear against dark or light chrome, while a solid tile keeps a
+       recognisable silhouette either way. -->
+  <rect width="64" height="64" rx="15" fill="#C89B5C" />
+
+  <!-- ST monogram drawn as paths, not text. An SVG favicon cannot load a web
+       font, so a text element would silently fall back to whatever serif the
+       viewer happens to have, and render differently per machine. These are
+       traced from the letterforms so the mark is identical everywhere.
+       Dark ink, matching the contrast result behind the accent-ink token:
+       white reaches only 2.5:1 on this amber, dark ink 6.6:1. -->
+  <g fill="#211E1A">
+    <!-- S -->
+    <path d="M25.6 17.4c-4.6 0-7.9 2.6-7.9 6.3 0 3.1 1.9 5 5.9 6l2.5.6c2.4.6 3.3 1.4 3.3 2.8 0 1.7-1.6 2.9-4 2.9-2.5 0-4.2-1.1-4.6-3.1h-4.2c.3 4 3.6 6.6 8.6 6.6 5 0 8.4-2.7 8.4-6.7 0-3.2-1.8-5-6.1-6l-2.4-.6c-2.3-.5-3.2-1.3-3.2-2.7 0-1.7 1.5-2.8 3.7-2.8 2.2 0 3.7 1.1 4 2.9h4.1c-.2-3.8-3.4-6.2-8.1-6.2z" />
+    <!-- T -->
+    <path d="M36.4 17.8h15.3v3.6h-5.6v17.6h-4.1V21.4h-5.6z" />
+  </g>
+
+  <!-- A single rule beneath the monogram, echoing the active-tab underline in
+       the app. Low opacity so it reads as a detail rather than competing with
+       the letters. -->
+  <rect x="21" y="45.5" width="22" height="2.5" rx="1.25" fill="#211E1A" opacity="0.5" />
+</svg>
