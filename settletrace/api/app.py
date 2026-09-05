@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -15,7 +16,7 @@ from .. import scheduler
 from ..audit import read_trail
 from ..batch_service import resolve_exception, run_settlement_batch
 from ..config import get_rules, get_settings
-from ..db import get_session, init_db
+from ..db import get_session, init_db, session_scope
 from ..explainer import llm_health
 from ..export import export_csv, export_filename, export_json
 from ..models import AuditLog, Batch, Exception_, Match, Order, ReasonCode
@@ -47,6 +48,33 @@ from .schemas import (
 logger = logging.getLogger(__name__)
 
 
+def _seed_if_empty() -> None:
+    """Seed the demo dataset, but only into an empty database.
+
+    Imported lazily: reset_demo lives at the project root and pulls in the
+    sample generator, which the API has no reason to load when seeding is off.
+    Failure here is logged and swallowed - an unseeded dashboard is a poor
+    demo, but a backend that will not boot is a dead one.
+    """
+    try:
+        with session_scope() as session:
+            if session.execute(select(Batch.id).limit(1)).first() is not None:
+                logger.info("SEED_ON_BOOT set, but data already present - skipping")
+                return
+
+        from reset_demo import reset
+
+        result = reset()
+        logger.info(
+            "Seeded demo data: batch #%s, %s transactions, %s exceptions",
+            result["batch_id"],
+            result["processed"],
+            result["exceptions"],
+        )
+    except Exception:  # noqa: BLE001 - boot must survive a seeding failure
+        logger.exception("Boot seeding failed; starting with an empty database")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Uvicorn configures logging only for its own loggers, so an app-level
@@ -57,6 +85,14 @@ async def lifespan(app: FastAPI):
 
     log_credential_report()
     init_db()
+
+    # A hosted deployment starts on an empty, ephemeral disk, so the dashboard
+    # would greet its first visitor with "no batches yet" and nothing to click.
+    # Seeding is opt-in via SEED_ON_BOOT so local runs keep whatever state the
+    # developer left behind, and it only fires when the database is genuinely
+    # empty - a restart must never discard work someone did on the live site.
+    if os.getenv("SEED_ON_BOOT", "").strip().lower() in {"1", "true", "yes"}:
+        _seed_if_empty()
     # FR-2.2's re-check schedule is only real if something drives it. The loop
     # starts with the app rather than on a button, so an order that goes stale
     # overnight is corrected overnight.
@@ -75,17 +111,33 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# The React client is served from its own origin in development. Origins are
-# listed explicitly rather than wildcarded: this API exposes a merchant's
-# settlement data, and a wildcard would let any page in the browser read it.
+# The React client is served from its own origin, in development and in
+# production alike. Origins are listed explicitly rather than wildcarded: this
+# API exposes a merchant's settlement data, and a wildcard would let any page
+# in the browser read it.
+#
+# CORS_ALLOW_ORIGINS holds the deployed frontend's URL (comma-separated if
+# there is more than one). Vercel preview deployments get a fresh subdomain per
+# build, which cannot be enumerated ahead of time, so they are matched by
+# pattern instead - deliberately anchored, so only *.vercel.app over HTTPS
+# matches and not, say, https://vercel.app.evil.com.
+_dev_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+]
+_configured_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ALLOW_ORIGINS", "").split(",")
+    if origin.strip()
+]
+VERCEL_PREVIEW_ORIGIN = r"https://[a-z0-9-]+\.vercel\.app"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ],
+    allow_origins=_dev_origins + _configured_origins,
+    allow_origin_regex=VERCEL_PREVIEW_ORIGIN,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -7,7 +7,17 @@
  * merchant will quote back to Razorpay.
  */
 
-const BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
+/**
+ * Backend origin. Both names are accepted because the deployment host and the
+ * local .env drifted apart, and a mistyped variable name fails as a silent
+ * fallback to localhost - which in production means every request fails with
+ * no clue why. Trailing slashes are stripped so a pasted dashboard value like
+ * "https://api.example.com/" cannot produce "//health".
+ */
+const CONFIGURED_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_BASE ?? "";
+
+const BASE = CONFIGURED_BASE.trim().replace(/\/+$/, "") || "http://127.0.0.1:8000";
 
 export type ReasonCode =
   | "unmatched_transaction"

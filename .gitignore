@@ -9,3 +9,7 @@ venv/
 *.sqlite3
 .pytest_cache/
 .streamlit/secrets.toml
+
+# Build output and deployment scratch
+frontend/dist/
+.vercel/

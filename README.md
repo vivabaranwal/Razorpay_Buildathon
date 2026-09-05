@@ -160,6 +160,42 @@ the fetch path — do not first try it live on stage.
 
 ---
 
+## Deploying it
+
+The backend is a single web process - the background re-check scheduler runs as
+an asyncio task inside the API process, not as a separate worker - so it fits a
+free tier that allows only one service.
+
+**Backend.** Start command, reading the port the host injects rather than a
+hardcoded one:
+
+```bash
+uvicorn settletrace.api.app:app --host 0.0.0.0 --port $PORT
+```
+
+Set `SEED_ON_BOOT=true` and `CORS_ALLOW_ORIGINS=https://your-frontend.example`
+in the host's dashboard, along with whichever LLM key you have. Every variable
+is optional in the sense that the app boots without it; the table above says
+what each one costs you.
+
+**Frontend.** A static Vite build. Set `VITE_API_BASE_URL` to the backend's
+public origin - it is read at *build* time, so changing it needs a redeploy,
+not just a restart. `frontend/vercel.json` supplies the SPA rewrite that keeps
+a direct link to `/the-itch` from 404ing.
+
+**Order matters:** deploy the backend first, because the frontend needs its URL
+baked in at build time; then deploy the frontend; then put the frontend's URL
+into `CORS_ALLOW_ORIGINS` and restart the backend.
+
+**On ephemeral disks** - most free tiers - the SQLite file is lost on every
+redeploy. That is fine here: the schema is recreated on boot and `SEED_ON_BOOT`
+reseeds the demo dataset, so a redeploy returns the live site to the same known
+state `reset_demo.py` produces locally. It only seeds an empty database, so a
+restart never discards work done on the live site. Do not put real merchant
+data behind this configuration - it is a demo deployment, not durable storage.
+
+---
+
 ## Design decisions worth knowing
 
 **Money is integer paise, never float.** Comparing settlement totals is the
