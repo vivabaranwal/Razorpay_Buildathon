@@ -88,15 +88,14 @@ function Header({
           className="itch-link group inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"
           title="Why SettleTrace exists"
         >
-          {/* The cue only runs for someone who has not opened the page yet.
-              Continuing to pulse at a reader who has already been there would
-              be nagging rather than pointing. */}
-          {showCue && (
-            <span
-              className="itch-dot h-[7px] w-[7px] shrink-0 rounded-full"
-              style={{ background: "var(--accent)" }}
-            />
-          )}
+          {/* The dot pulses on every visit. Suppressing it after one view
+              made the link effectively invisible on any return trip, which is
+              wrong for a page that is the whole argument for the project.
+              Only the shimmer below is a one-time introduction. */}
+          <span
+            className="itch-dot h-[7px] w-[7px] shrink-0 rounded-full"
+            style={{ background: "var(--accent)" }}
+          />
           <span
             className={`font-display text-[15px] font-medium ${
               showCue ? "itch-shimmer" : ""
