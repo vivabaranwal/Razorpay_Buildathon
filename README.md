@@ -136,18 +136,35 @@ advertising a model that is not answering.
 
 ### The Razorpay caveat, stated plainly
 
-**What is verified:** one real, read-only HTTPS call to Razorpay's live API
-(`GET /v1/payments`), exercised through the "Test connection" button on the
-Payment state tab. Against deliberately invalid test credentials it returned a
-genuine `401 Authentication failed` in 714 ms — a real network round trip, not a
-stub.
+**What is verified:** authenticated, read-only HTTPS calls to Razorpay's live
+API using real test-mode credentials. `GET /v1/payments` returns `200` in
+~1.0 s through the "Test connection" button on the Payment state tab, and the
+same credentials were used to probe `settlement.all` and the settlement recon
+report successfully. Against deliberately invalid credentials the same path
+returns a genuine `401 Authentication failed` — both directions are real
+network round trips, not stubs.
 
-**What is not verified:** the sandbox *data-fetching* logic —
-`settlement.recon_entity` and paginated payment fetching — is implemented
-against Razorpay's documented API shapes but has **never been run against a live
-sandbox account**, because no test-mode credentials were available during the
-build. The parsed output has not been confirmed to match what the reconciliation
-engine expects.
+**Two real bugs this found.** Running against the live API immediately broke
+code that had only ever been written against the documentation:
+
+* `settlement.recon_entity` **does not exist** on the Razorpay SDK's settlement
+  resource. The correct method is `settlement.report`. The call raised
+  `AttributeError` before it could reach the network — it could never have
+  worked.
+* The recon report is addressed **by calendar month, not by settlement**.
+  Razorpay rejects the settlement ID outright (`settlement_id is/are not
+  required and should not be sent`) and requires `year`. The month is now
+  derived from the settlement's own `created_at` and the results filtered down
+  to the settlement in question.
+
+Both are fixed and the call now reaches Razorpay's servers rather than failing
+locally.
+
+**What is still not verified:** the settlement path end to end, against real
+settlement data. A settlement is Razorpay moving money to a bank account, which
+does not happen in test mode — `settlement.all` and the recon report both
+return `count: 0` on a test account. So the parsing of populated settlement rows
+remains unconfirmed, and Module 1 continues to run on generated data.
 
 **Therefore the demo runs on generated sample data**, with one verified real
 connectivity call. This is disclosed in the UI at all times: the header shows a

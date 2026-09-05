@@ -149,23 +149,41 @@ class RazorpayProvider:
         }
 
     def fetch_line_items(self, settlement_id: str) -> pd.DataFrame:
-        """Per-transaction deductions from the settlement recon report."""
+        """Per-transaction deductions from the settlement recon report.
+
+        The recon report is addressed by calendar month, not by settlement:
+        Razorpay rejects a settlement_id outright ("settlement_id is/are not
+        required and should not be sent") and requires year. So the whole
+        month is fetched and filtered down to the settlement we care about.
+        The month comes from the settlement's own created_at, so the signature
+        stays the one every provider shares.
+
+        Verified against the live test API: the SDK method is
+        ``settlement.report`` - ``recon_entity`` does not exist on the client
+        and raised AttributeError before it could ever reach the network.
+        """
+        settled_at = self.fetch_settlement(settlement_id)["settled_at"]
+        year, month = settled_at.year, settled_at.month
+
         rows: list[dict] = []
         skip = 0
 
         while True:
             page = self._call(
-                self._client.settlement.recon_entity,
-                {"settlement_id": settlement_id, "count": PAGE_SIZE, "skip": skip},
+                self._client.settlement.report,
+                {"year": year, "month": month, "count": PAGE_SIZE, "skip": skip},
             )
             items = page.get("items", [])
             for item in items:
+                # A month holds every settlement in it; keep only this one.
+                if item.get("settlement_id") not in (settlement_id, None):
+                    continue
                 rows.append(
                     {
                         "transaction_id": item.get("entity_id", ""),
                         "settlement_id": settlement_id,
-                        "fee_paise": int(item.get("fee", 0)),
-                        "gst_paise": int(item.get("tax", 0)),
+                        "fee_paise": int(item.get("fee") or 0),
+                        "gst_paise": int(item.get("tax") or 0),
                         "reserve_paise": 0,
                     }
                 )
